@@ -1,0 +1,5 @@
+{
+  "name": "Cocina TCM con Gemini",
+  "description": "Una aplicación que genera recetas de Medicina Tradicional China basadas en tus ingredientes, explicando sus beneficios y generando una imagen del plato final.",
+  "requestFramePermissions": []
+}
