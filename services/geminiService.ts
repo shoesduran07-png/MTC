@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TCMRecipe } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE.API.KEY });
 
 export const generateRecipeFromIngredients = async (ingredients: string[]): Promise<TCMRecipe> => {
   if (!ingredients || ingredients.length === 0) {
