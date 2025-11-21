@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TCMRecipe } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const generateRecipeFromIngredients = async (ingredients: string[]): Promise<TCMRecipe> => {
   if (!ingredients || ingredients.length === 0) {
@@ -76,12 +76,11 @@ export const generateDishImage = async (recipeTitle: string, description: string
       },
       config: {
         imageConfig: {
-          aspectRatio: "1:1", // Square is good for cards
+          aspectRatio: "1:1",
         }
       }
     });
 
-    // Iterate through parts to find the image
     const parts = response.candidates?.[0]?.content?.parts;
     if (parts) {
       for (const part of parts) {
@@ -93,7 +92,50 @@ export const generateDishImage = async (recipeTitle: string, description: string
     return undefined;
   } catch (error) {
     console.error("Error generating image:", error);
-    // Return undefined to handle gracefully in UI
     return undefined;
+  }
+};
+
+export const editDishImage = async (imageBase64: string, editPrompt: string): Promise<string | undefined> => {
+  try {
+    // Parse base64 string
+    const matches = imageBase64.match(/^data:(.+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      console.error("Invalid base64 format provided for editing");
+      return undefined;
+    }
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+
+    const prompt = `Edit this food image: ${editPrompt}. Maintain the high quality, lighting, and style of the original food photography.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-image",
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: mimeType,
+            },
+          },
+          { text: prompt }
+        ]
+      }
+    });
+
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.mimeType.startsWith('image/')) {
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+    }
+    return undefined;
+  } catch (error) {
+    console.error("Error editing image:", error);
+    // Propagate error or return undefined? UI handles undefined as no change or error
+    throw error;
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { TCMRecipe, LoadingState } from './types';
-import { generateRecipeFromIngredients, generateDishImage } from './services/geminiService';
+import { generateRecipeFromIngredients, generateDishImage, editDishImage } from './services/geminiService';
 import IngredientInput from './components/IngredientInput';
 import RecipeCard from './components/RecipeCard';
 
@@ -49,6 +49,28 @@ function App() {
       console.error(err);
       setError("Ocurrió un error al conectar con los espíritus de la cocina. Por favor intenta de nuevo.");
       setLoadingState(LoadingState.ERROR);
+    }
+  };
+
+  const handleEditImage = async (prompt: string) => {
+    if (!imageUrl) return;
+
+    setLoadingState(LoadingState.GENERATING_IMAGE);
+    // Do not clear error here implicitly, but we can clear it if we want to reset state
+    // We keep the old image while generating the new one (handled by UI)
+    
+    try {
+      const newImageUrl = await editDishImage(imageUrl, prompt);
+      if (newImageUrl) {
+        setImageUrl(newImageUrl);
+      } else {
+        setError("No se pudo modificar la imagen. Intenta con otro comando.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Error al modificar la imagen.");
+    } finally {
+      setLoadingState(LoadingState.COMPLETE);
     }
   };
 
@@ -139,6 +161,7 @@ function App() {
               recipe={recipe} 
               imageUrl={imageUrl} 
               loadingImage={loadingState === LoadingState.GENERATING_IMAGE}
+              onEditImage={handleEditImage}
             />
           )}
         </div>

@@ -1,29 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TCMRecipe } from '../types';
 
 interface RecipeCardProps {
   recipe: TCMRecipe;
   imageUrl?: string;
   loadingImage: boolean;
+  onEditImage: (prompt: string) => void;
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, imageUrl, loadingImage }) => {
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, imageUrl, loadingImage, onEditImage }) => {
+  const [editPrompt, setEditPrompt] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPrompt.trim()) return;
+    
+    setIsEditing(true); // Local loading state for button feedback
+    await onEditImage(editPrompt);
+    setEditPrompt('');
+    setIsEditing(false);
+  };
+
+  // Determine if we should show the spinner overlay
+  // We show it if loadingImage is true (parent state)
+  const isLoading = loadingImage;
+
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-stone-100 animate-fadeInUp">
-      {/* Header Image Section */}
-      <div className="relative w-full h-64 md:h-80 bg-stone-100">
+      {/* Image Section - Increased height/aspect ratio for clarity */}
+      <div className="relative w-full aspect-square md:h-[500px] md:aspect-auto bg-stone-100 group">
         {imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt={recipe.title} 
-            className="w-full h-full object-cover animate-fadeIn"
-          />
+          <>
+            <img 
+              src={imageUrl} 
+              alt={recipe.title} 
+              className={`w-full h-full object-cover transition-all duration-500 ${isLoading ? 'blur-sm opacity-80' : ''}`}
+            />
+            {isLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 backdrop-blur-sm z-10">
+                <div className="bg-white/90 p-4 rounded-full shadow-lg mb-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tcm-green border-r-2"></div>
+                </div>
+                <span className="font-serif font-medium text-tcm-ink bg-white/90 px-3 py-1 rounded-lg shadow-sm">
+                   Transformando imagen...
+                </span>
+              </div>
+            )}
+          </>
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center text-stone-400">
-            {loadingImage ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 p-8 text-center">
+            {isLoading ? (
               <>
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-tcm-green mb-4"></div>
-                <span className="text-sm font-serif italic">Pintando tu platillo con Qi digital...</span>
+                <span className="text-lg font-serif italic text-tcm-green">Pintando tu platillo con Qi digital...</span>
               </>
             ) : (
               <span className="text-sm italic">Imagen no disponible</span>
@@ -31,15 +61,47 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, imageUrl, loadingImage 
           </div>
         )}
         
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-6 pt-20">
+        {/* Title Overlay - Only visible when not editing/loading to keep image clear? 
+            Or keep it but make it unobtrusive. Let's keep it at bottom with gradient. */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-6 pt-24 pointer-events-none">
           <h2 className="text-3xl md:text-4xl font-serif font-bold text-white drop-shadow-md mb-1">
             {recipe.title}
           </h2>
-          <p className="text-white/90 text-sm md:text-base font-medium max-w-2xl">
+          <p className="text-white/90 text-sm md:text-base font-medium max-w-2xl line-clamp-2">
             {recipe.description}
           </p>
         </div>
       </div>
+
+      {/* Edit Image Controls */}
+      {imageUrl && (
+        <div className="bg-stone-50 px-6 py-4 border-b border-stone-100">
+          <form onSubmit={handleEditSubmit} className="flex flex-col sm:flex-row gap-3 items-center">
+            <div className="relative flex-grow w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-stone-400">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={editPrompt}
+                onChange={(e) => setEditPrompt(e.target.value)}
+                disabled={isLoading}
+                placeholder="Ej: 'Añadir filtro retro', 'Quitar cuchara', 'Más luz'..."
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-stone-200 focus:border-tcm-green focus:ring-1 focus:ring-tcm-green outline-none text-sm bg-white"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || !editPrompt.trim()}
+              className="w-full sm:w-auto px-4 py-2 bg-tcm-ink text-white text-sm font-medium rounded-lg hover:bg-stone-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              {isLoading ? 'Editando...' : 'Modificar Imagen'}
+            </button>
+          </form>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-3 gap-0">
         {/* Sidebar - Ingredients & Steps */}
